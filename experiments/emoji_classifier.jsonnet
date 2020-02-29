@@ -49,8 +49,11 @@ local transformer_model = "albert-base-v2"; // "distilbert-base-uncased";
       "dropout": [0.2, 0.0]
     }
   },
-  "iterator": {
-    "type": "basic",
+  /*
+  "iterator": 
+  */
+  "data_loader": {
+    "type": "default", // "basic",
     "batch_size": 2
   },
   "trainer": {

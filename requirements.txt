@@ -1,4 +1,4 @@
-allennlp==0.9.1.dev20200221
+allennlp==0.9.1.dev20200228
 pytest-pythonpath
 
 # Checks style, syntax, and other useful errors.
