@@ -1,0 +1,1 @@
+from allennlp_server.config_explorer.config_explorer import make_app
