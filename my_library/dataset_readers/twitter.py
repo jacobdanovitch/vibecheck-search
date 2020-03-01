@@ -52,19 +52,25 @@ class TwitterDatasetReader(DatasetReader):
     def __init__(self,
                  lazy: bool = False,
                  tokenizer: Tokenizer = None,
+                 sample: int = None,
                  token_indexers: Dict[str, TokenIndexer] = None) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._sample = sample
 
     @overrides
     def _read(self, file_path):
-        data = pd.read_csv(file_path).fillna({'label': 'N/A'}).to_dict(orient='records')
+        df = pd.read_csv(cached_path(file_path)).fillna({'label': 'N/A'})
+        if self._sample:
+            df = df.sample(self._sample)
+        
+        data = df.to_dict(orient='records')
         instances = map(lambda x: self.text_to_instance(**x), data)
-        # yield from filter(None, instances)
-        for inst in instances:
-            if inst:
-                yield inst
+        yield from filter(None, instances)
+        #for inst in instances:
+        #    if inst:
+        #        yield inst
 
     @overrides
     def text_to_instance(self, text: str, label: str = None) -> Instance:  # type: ignore

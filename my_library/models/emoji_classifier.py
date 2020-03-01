@@ -1,7 +1,8 @@
 from typing import Dict, Optional
 import logging
+from itertools import groupby
 
-import numpy
+import numpy as np
 from overrides import overrides
 import torch
 import torch.nn as nn
@@ -14,9 +15,18 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 
+from allennlp.training.metrics import BooleanAccuracy, PearsonCorrelation
 from my_library.training.metrics.multilabel_f1 import MultiLabelF1Measure
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+def rsq_loss(x, y):
+    # https://discuss.pytorch.org/t/use-pearson-correlation-coefficient-as-cost-function/8739/2
+    vx = x - torch.mean(x)
+    vy = y - torch.mean(y)
+
+    cost = torch.sum(vx * vy) / (torch.sqrt(torch.sum(vx ** 2)) * torch.sqrt(torch.sum(vy ** 2)))
+    return cost
 
 @Model.register("bertmoji")
 class BERTMoji(Model):
@@ -67,9 +77,13 @@ class BERTMoji(Model):
         self.classifier_feedforward = classifier_feedforward
 
         self.metrics = {
-                "multilabel-f1": MultiLabelF1Measure()
+                "multilabel-f1": MultiLabelF1Measure(),
+                'accuracy': BooleanAccuracy()
         }
-        self.loss = nn.BCEWithLogitsLoss()
+        self.pearson_r = PearsonCorrelation()
+        self.loss = nn.MultiLabelSoftMarginLoss() #BCEWithLogitsLoss() 
+        
+        self._threshold = 0.5
 
         initializer(self)
 
@@ -101,10 +115,17 @@ class BERTMoji(Model):
         encoded = self.encoder(embedded, mask)
 
         logits = self.classifier_feedforward(encoded)
-        output_dict = {'logits': logits}
-        if label is not None:
+        output_dict = {'logits': torch.sigmoid(logits)}
+        
+        if label is None: # inference
+            decoded = self.decode(output_dict)
+            output_dict['decoded'] = decoded
+        else:
             loss = self.loss(logits, label.float())
-            preds = (torch.sigmoid(logits) > 0.5).long()
+            loss = loss + (1-rsq_loss(logits, label.float()))
+            
+            self.pearson_r(logits, label.float())
+            preds = (logits > self._threshold).long()
             for metric in self.metrics.values():
                 metric(preds, label)
             output_dict["loss"] = loss
@@ -117,14 +138,28 @@ class BERTMoji(Model):
         Does a simple argmax over the class probabilities, converts indices to string labels, and
         adds a ``"label"`` key to the dictionary with the result.
         """
-        class_probabilities = F.softmax(output_dict['logits'], dim=-1)
-        output_dict['class_probabilities'] = class_probabilities
+        # class_probabilities = F.softmax(output_dict['logits'], dim=-1)
+        # output_dict['class_probabilities'] = class_probabilities
+        
+        class_probabilities = output_dict['logits']
 
         predictions = class_probabilities.cpu().data.numpy()
-        argmax_indices = numpy.argmax(predictions, axis=-1)
-        labels = [self.vocab.get_token_from_index(x, namespace="labels")
-                  for x in argmax_indices]
-        output_dict['label'] = labels
+        # argmax_indices = np.argmax(predictions, axis=-1)
+        
+        scores = ((self.vocab.get_token_from_index(i, namespace="labels"), s) for (i, s) in enumerate(predictions.squeeze()))
+        output_dict['scores'] = [sorted(scores, key=lambda x: x[1], reverse=True)]
+        
+        """
+        positive = np.argwhere(predictions > self._threshold)# .squeeze()
+        groups = groupby(positive.tolist(), lambda x: x[0])
+        label_dict = {key: [self.vocab.get_token_from_index(x[1], namespace="labels") for x in group] for (key, group) 
+                      in groups}
+        labels = [x[1] for x in sorted(label_dict.items())]
+        
+        #labels = [self.vocab.get_token_from_index(x, namespace="labels")
+        #          for x in argmax_indices]
+        output_dict['label'] = [labels]
+        """
         return output_dict
 
     @overrides
@@ -133,4 +168,6 @@ class BERTMoji(Model):
             if isinstance(m, tuple):
                 return m[-1]
             return m
-        return {metric_name: unpack(metric.get_metric(reset)) for metric_name, metric in self.metrics.items()}
+        metrics = {metric_name: unpack(metric.get_metric(reset)) for metric_name, metric in self.metrics.items()}
+        metrics['pearson_r'] = self.pearson_r.get_metric(reset)
+        return metrics

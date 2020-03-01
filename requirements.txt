@@ -1,3 +1,7 @@
+pandas
+annoy
+
+cudatoolkit==10.0.130
 allennlp==0.9.1.dev20200228
 pytest-pythonpath
 
