@@ -7,7 +7,7 @@ from allennlp.predictors import Predictor
 
 # required so that our custom model + predictor + dataset reader
 # will be registered by name
-import my_library
+import vibecheck
 
 class TestPaperClassifierPredictor(TestCase):
     def test_uses_named_inputs(self):

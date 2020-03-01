@@ -2,7 +2,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 
-from my_library.dataset_readers import SemanticScholarDatasetReader
+from vibecheck.dataset_readers import SemanticScholarDatasetReader
 
 
 class TestSemanticScholarDatasetReader(AllenNlpTestCase):

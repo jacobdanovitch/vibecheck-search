@@ -1,0 +1,1 @@
+from vibecheck.predictors.emoji_classifier_predictor import EmojiClassifierPredictor

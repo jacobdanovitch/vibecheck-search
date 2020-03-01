@@ -16,8 +16,8 @@ run_tests() {
 
 if [[ "$RUN_LINT" == "true" ]]; then
     echo "Running linter and mypy"
-    pylint my_library
-    mypy my_library --ignore-missing-imports
+    pylint vibecheck
+    mypy vibecheck --ignore-missing-imports
 fi
 
 if [[ "$SKIP_TESTS" != "true" ]]; then

@@ -16,7 +16,7 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 
 from allennlp.training.metrics import BooleanAccuracy, PearsonCorrelation
-from my_library.training.metrics.multilabel_f1 import MultiLabelF1Measure
+from vibecheck.training.metrics.multilabel_f1 import MultiLabelF1Measure
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
