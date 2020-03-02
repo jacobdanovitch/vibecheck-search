@@ -161,7 +161,9 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
         overrides=args.overrides,
     )
 
-    return Predictor.from_archive(archive, args.predictor)
+    predictor = Predictor.from_archive(archive, args.predictor)
+    predictor._model.eval()
+    return predictor
 
 
 @Subcommand.register("serve")

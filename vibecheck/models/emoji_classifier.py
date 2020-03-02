@@ -138,28 +138,14 @@ class BERTMoji(Model):
         Does a simple argmax over the class probabilities, converts indices to string labels, and
         adds a ``"label"`` key to the dictionary with the result.
         """
-        # class_probabilities = F.softmax(output_dict['logits'], dim=-1)
-        # output_dict['class_probabilities'] = class_probabilities
+        def get_scores(row):
+            scores = ((self.vocab.get_token_from_index(i, namespace="labels"), s) for (i, s) in enumerate(row))
+            return sorted(scores, key=lambda x: x[1], reverse=True)
         
         class_probabilities = output_dict['logits']
-
         predictions = class_probabilities.cpu().data.numpy()
-        # argmax_indices = np.argmax(predictions, axis=-1)
         
-        scores = ((self.vocab.get_token_from_index(i, namespace="labels"), s) for (i, s) in enumerate(predictions.squeeze()))
-        output_dict['scores'] = [sorted(scores, key=lambda x: x[1], reverse=True)]
-        
-        """
-        positive = np.argwhere(predictions > self._threshold)# .squeeze()
-        groups = groupby(positive.tolist(), lambda x: x[0])
-        label_dict = {key: [self.vocab.get_token_from_index(x[1], namespace="labels") for x in group] for (key, group) 
-                      in groups}
-        labels = [x[1] for x in sorted(label_dict.items())]
-        
-        #labels = [self.vocab.get_token_from_index(x, namespace="labels")
-        #          for x in argmax_indices]
-        output_dict['label'] = [labels]
-        """
+        output_dict['scores'] = list(map(get_scores, predictions))
         return output_dict
 
     @overrides
