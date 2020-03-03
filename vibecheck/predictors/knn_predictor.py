@@ -20,7 +20,7 @@ class KNNPredictor(Predictor):
     def __init__(self, 
                  model: Model, 
                  dataset_reader: DatasetReader,
-                 vocab_path: str = '/home/jacobgdt/bertmoji/resources/vocab',
+                 vocab_path: str = 'resources/vocab',
                  df_path: str = 'https://storage.googleapis.com/jacobdanovitch/spotify_lyrics/spotify_with_genius.csv',
                  annoy_index_path: str = 'https://storage.googleapis.com/jacobdanovitch/spotify_lyrics/index.tree'
                 ) -> None:
