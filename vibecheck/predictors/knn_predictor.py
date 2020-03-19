@@ -28,7 +28,7 @@ class KNNPredictor(Predictor):
         super().__init__(model.eval(), dataset_reader)
         
         self.vocab = Vocabulary().from_files(vocab_path)
-        self.df = pd.read_csv(df_path).set_index("track_id")
+        self.df = pd.read_csv(cached_path(df_path)).set_index("track_id")
         
         self.index = None
         if annoy_index_path:
@@ -37,8 +37,6 @@ class KNNPredictor(Predictor):
     def build_index(self, path: str, tracks: List[Tuple[str, np.array]] =None):
         dim = self._model.classifier_feedforward.get_output_dim()
         if tracks is None:
-            #if not os.path.exists(path):
-                # path = urlretrieve(path)[0]
             self.index = AnnoyIndex(dim, metric='angular')
             self.index.load(cached_path(path))
             return
@@ -53,22 +51,24 @@ class KNNPredictor(Predictor):
         
         self.index = index
     
-    def neighbors_to_tracks(self, nns):
+    def neighbors_to_tracks(self, nns, fields=[]):
+        fields = fields or self.df.columns.tolist()
         tracks = [self.vocab.get_token_from_index(i, "labels") for i in nns]
-        return self.df.loc[tracks].reset_index(drop=True).to_dict(orient='records')
+        return self.df.loc[tracks, fields].reset_index(drop=True).to_dict(orient='records')
     
     def predict_json(self, inputs: JsonDict) -> JsonDict:
+        fields = inputs.pop('fields', [])
         n = inputs.pop('n', 10)
         search_k = -1 # self.index.get_n_trees() * n * 1
+        
         if 'track_id' in inputs:
             if self.index is None:
                 raise AttributeError("Please build an index before searching by track.")
             idx = self.vocab.get_token_to_index_vocabulary("labels")[inputs['track_id']]
             nns = self.index.get_nns_by_item(idx, n+1)[1:]
             #scores = self.index.get_item_vector(idx) 
-            tracks = self.neighbors_to_tracks(nns)
-            return tracks
-            #return {'tracks': tracks, 'scores': scores}
+            tracks = self.neighbors_to_tracks(nns, fields)
+            return tracks # {'tracks': tracks, 'scores': scores}
             
             
         instance = self._json_to_instance(inputs)
@@ -77,7 +77,7 @@ class KNNPredictor(Predictor):
         if self.index:
             logits = output_dict.get('logits')
             nns = self.index.get_nns_by_vector(logits, n, search_k=search_k)
-            return self.neighbors_to_tracks(nns)
+            return self.neighbors_to_tracks(nns, fields)
             #output_dict['tracks'] = self.neighbors_to_tracks(nns)
         return output_dict
 
