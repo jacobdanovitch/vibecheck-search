@@ -60,8 +60,8 @@ class KNNPredictor(Predictor):
         n = inputs.pop('n', 10)
         return_scores = bool(inputs.pop('return_scores', False))
         
-        D = inputs.pop('nns_D', None)
-        search_k = self.index.get_n_trees() * n * D if D else -1
+        D = inputs.pop('nns_D', 1000)
+        search_k = self.index.get_n_trees() * n * D if bool(D) else -1
         
         if 'track_id' in inputs:
             if self.index is None:
@@ -80,7 +80,7 @@ class KNNPredictor(Predictor):
             logits = output_dict.get('logits')
             nns = self.index.get_nns_by_vector(logits, n, search_k=search_k)
             tracks = self.neighbors_to_tracks(nns, fields)
-            
+
             return tracks if not return_scores else {'tracks': tracks, 'scores': logits}
         return output_dict
 
