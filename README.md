@@ -6,7 +6,7 @@ Server for VibeCheck project.
 
 ```shell
 pip install -r requirements.txt
-pip install -r server/dev_requirements.txt
+pip install -r server/dev-requirements.txt
 pip install -e server
 
 source .env

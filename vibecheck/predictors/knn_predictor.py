@@ -6,6 +6,7 @@ from allennlp.data import Instance, DatasetReader
 from allennlp.predictors.predictor import Predictor
 from allennlp.models import Model
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.file_utils import cached_path
 
 import pandas as pd
 import numpy as np
@@ -34,15 +35,15 @@ class KNNPredictor(Predictor):
             self.build_index(annoy_index_path)
     
     def build_index(self, path: str, tracks: List[Tuple[str, np.array]] =None):
-        features = self._model.classifier_feedforward.get_output_dim()
+        dim = self._model.classifier_feedforward.get_output_dim()
         if tracks is None:
-            if not os.path.exists(path):
-                path = urlretrieve(path)[0]
-            self.index = AnnoyIndex(features, metric='angular')
-            self.index.load(path)
+            #if not os.path.exists(path):
+                # path = urlretrieve(path)[0]
+            self.index = AnnoyIndex(dim, metric='angular')
+            self.index.load(cached_path(path))
             return
         
-        index = AnnoyIndex(features, metric='angular')
+        index = AnnoyIndex(dim, metric='angular')
         for track, vector in tqdm(tracks):
             i = self.vocab.get_token_to_index_vocabulary("labels")[track]
             index.add_item(i, vector)
