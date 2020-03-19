@@ -59,6 +59,7 @@ class KNNPredictor(Predictor):
     
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         n = inputs.pop('n', 10)
+        search_k = -1 # self.index.get_n_trees() * n * 1
         if 'track_id' in inputs:
             if self.index is None:
                 raise AttributeError("Please build an index before searching by track.")
@@ -75,7 +76,7 @@ class KNNPredictor(Predictor):
         output_dict['inputs'] = inputs
         if self.index:
             logits = output_dict.get('logits')
-            nns = self.index.get_nns_by_vector(logits, n)
+            nns = self.index.get_nns_by_vector(logits, n, search_k=search_k)
             return self.neighbors_to_tracks(nns)
             #output_dict['tracks'] = self.neighbors_to_tracks(nns)
         return output_dict

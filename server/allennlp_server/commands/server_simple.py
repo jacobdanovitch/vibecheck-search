@@ -96,6 +96,7 @@ def make_app(
         )
 
     app = Flask(__name__)
+    app.debug = bool(os.environ.get('DEBUG', False))
 
     @app.errorhandler(ServerError)
     def handle_invalid_usage(error: ServerError) -> Response:
