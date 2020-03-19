@@ -13,7 +13,6 @@ import numpy as np
 from annoy import AnnoyIndex
 
 import os
-from urllib.request import urlretrieve
 from tqdm.auto import tqdm
 
 @Predictor.register('knn_classifier')
@@ -59,16 +58,19 @@ class KNNPredictor(Predictor):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         fields = inputs.pop('fields', [])
         n = inputs.pop('n', 10)
-        search_k = -1 # self.index.get_n_trees() * n * 1
+        return_scores = bool(inputs.pop('return_scores', False))
+        
+        D = inputs.pop('nns_D', None)
+        search_k = self.index.get_n_trees() * n * D if D else -1
         
         if 'track_id' in inputs:
             if self.index is None:
                 raise AttributeError("Please build an index before searching by track.")
             idx = self.vocab.get_token_to_index_vocabulary("labels")[inputs['track_id']]
             nns = self.index.get_nns_by_item(idx, n+1)[1:]
-            #scores = self.index.get_item_vector(idx) 
+            scores = self.index.get_item_vector(idx) 
             tracks = self.neighbors_to_tracks(nns, fields)
-            return tracks # {'tracks': tracks, 'scores': scores}
+            return tracks if not return_scores else {'tracks': tracks, 'scores': scores}
             
             
         instance = self._json_to_instance(inputs)
@@ -77,8 +79,9 @@ class KNNPredictor(Predictor):
         if self.index:
             logits = output_dict.get('logits')
             nns = self.index.get_nns_by_vector(logits, n, search_k=search_k)
-            return self.neighbors_to_tracks(nns, fields)
-            #output_dict['tracks'] = self.neighbors_to_tracks(nns)
+            tracks = self.neighbors_to_tracks(nns, fields)
+            
+            return tracks if not return_scores else {'tracks': tracks, 'scores': logits}
         return output_dict
 
     @overrides
