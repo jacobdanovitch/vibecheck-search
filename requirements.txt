@@ -6,7 +6,7 @@ allennlp==0.9.1.dev20200228
 pytest-pythonpath
 
 # Checks style, syntax, and other useful errors.
-pylint==1.8.1
+pylint==4.0.9
 
 # Static type checking
 mypy==0.521
